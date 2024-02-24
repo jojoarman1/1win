@@ -112,7 +112,7 @@ def register(call):
     back_btn = types.InlineKeyboardButton("🔙 Вернуться в главное меню", callback_data='main_menu')
     markup.add(subscribe_btn)
     markup.add(back_btn)
-    with open("REGISTERPHOTO.jpg") as photo:
+    with open("REGISTERPHOTO.jpg", "rb") as photo:
         bot.send_photo(call.message.chat.id, photo, caption=message, reply_markup=markup, parse_mode='HTML')
 
 
