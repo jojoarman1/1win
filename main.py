@@ -138,7 +138,8 @@ def send_instruction(call):
     back_btn = types.InlineKeyboardButton("🔙 Вернуться в главное меню", callback_data='main_menu')
     markup.add(back_btn)
     with open("INSTRUKT.jpg", "rb") as photo:
-        bot.send_photo(call.message.chat.id, photo, caption=message, reply_markup=markup, parse_mode='HTML')
+        bot.send_photo(call.message.chat.id, photo.read(), caption=message, reply_markup=markup, parse_mode='HTML')
+
 
 last_message_id = None
 
