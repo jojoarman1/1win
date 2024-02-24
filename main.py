@@ -117,8 +117,8 @@ def register(call):
 
 
 def send_instruction(call):
-instruction_photo_path = 'INSTRUKT.jpg'
-instruction_photo = InputFile(path_or_bytesio=instruction_photo_path)
+    instruction_photo_path = 'INSTRUKT.jpg'
+    instruction_photo = InputFile(path_or_bytesio=instruction_photo_path)
 
 # Подготавливаем текст подписи, используя многострочный строковый литерал
 caption = (
