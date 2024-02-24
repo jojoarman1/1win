@@ -211,11 +211,20 @@ def handle_registration(message):
     if len(user_id_site) == 8:
         user_ids[user_id_telegram] = user_id_site  # Запоминаем соответствие ID пользователя в Telegram и ID на сайте
         markup = types.InlineKeyboardMarkup()
-        main_menu_button = types.InlineKeyboardButton("🔙 Вернуться в главное меню", callback_data='main_menu')
+        give_signal_button = types.InlineKeyboardButton("❗️ Выдать сигнал ❗️", callback_data='give_signal')
         instruction_button = types.InlineKeyboardButton("📚 Инструкция", callback_data='instruction')
-        markup.row(main_menu_button, instruction_button)  # Добавляем кнопки в одну строку
+        close_menu_button = types.InlineKeyboardButton("🔒 Закрыть меню", callback_data='close_menu')
+        markup.row(give_signal_button)
+        markup.row(instruction_button)
+        markup.row(close_menu_button)
         bot.send_message(message.chat.id, "Вы успешно зарегистрированы!", reply_markup=markup)
     else:
         bot.send_message(message.chat.id, "Неверный ID.")
+
+@bot.callback_query_handler(func=lambda call: call.data == 'close_menu')
+def close_menu_handler(call):
+    bot.delete_message(call.message.chat.id, call.message.message_id)
+
+
 
 bot.polling(none_stop=True)
