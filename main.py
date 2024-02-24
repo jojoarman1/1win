@@ -102,7 +102,7 @@ def check_user_subscription(call):
 
 def register(call):
     message = (
-        "🔷 1. Для начала зарегистрируйтесь на сайте <a href='https://1wcdcw.xyz/casino/list?open=register'>1WIN(CLICK) </a> ""с секретным промокодом <code>MINES54</code>\n"
+        "🔷 1. Для начала зарегистрируйтесь на сайте <a href='https://1wcdcw.xyz/casino/list?open=register'>1WIN(CLICK) </a> ""ДЛЯ СТАБИЛЬНОЙ РАБОТЫ СОЗДАЙТЕ НОВЫЙ АККАУНТ - с секретным промокодом <code>MINES54</code>\n"
         "🔷 2. После успешной регистрации cкопируйте ваш айди на сайте (Вкладка 'пополнение' и в правом верхнем углу будет ваш ID).\n"
         "🔷 3. И отправьте его боту в ответ на это сообщение."
     )
@@ -137,7 +137,7 @@ def send_instruction(call):
     markup = types.InlineKeyboardMarkup()
     back_btn = types.InlineKeyboardButton("🔙 Вернуться в главное меню", callback_data='main_menu')
     markup.add(back_btn)
-    wi  th open("INSTRUKT.jpg.", "rb") as photo:
+    with open("INSTRUKT.jpg.", "rb") as photo:
         bot.send_photo(call.message.chat.id, photo, caption=message, reply_markup=markup, parse_mode='HTML')
 
 
