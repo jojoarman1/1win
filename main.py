@@ -4,6 +4,7 @@ import telebot
 from telebot import types
 import time
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+import logging
 
 TOKEN = '7050738799:AAGgUIcWC5BwD46im4EaOB4mLdu2HwxhnX4'
 channel_username = '@hakermines12'
@@ -227,4 +228,9 @@ def close_menu_handler(call):
 
 
 
-bot.polling(none_stop=True)
+while True:
+    try:
+        bot.polling(none_stop=True)
+    except Exception as e:
+        logging.error(e)
+        time.sleep(15)
