@@ -103,13 +103,13 @@ def check_user_subscription(call):
 
 def register(call):
     message = (
-        "🔷 1. Для начала зарегистрируйтесь на сайте <a href='https://1wcdcw.xyz/casino/list?open=register'>1WIN(CLICK) </a> ""ДЛЯ СТАБИЛЬНОЙ РАБОТЫ СОЗДАЙТЕ НОВЫЙ АККАУНТ - с секретным промокодом <code>MINES54</code>\n"
+        "🔷 1. Для начала зарегистрируйтесь на сайте <a href='https://1wiipr.xyz/casino/list?open=register'>1WIN(CLICK) </a> ""ДЛЯ СТАБИЛЬНОЙ РАБОТЫ СОЗДАЙТЕ НОВЫЙ АККАУНТ - с секретным промокодом <code>MINES54</code>\n"
         "🔷 2. После успешной регистрации cкопируйте ваш айди на сайте (Вкладка 'пополнение' и в правом верхнем углу будет ваш ID).\n"
         "🔷 3. И отправьте его боту в ответ на это сообщение."
     )
     markup = types.InlineKeyboardMarkup()
     subscribe_btn = types.InlineKeyboardButton("📱🔶 Зарегистрироваться",
-                                               url='https://1wcdcw.xyz/casino/list?open=register')
+                                               url='https://1wiipr.xyz/casino/list?open=register')
     back_btn = types.InlineKeyboardButton("🔙 Вернуться в главное меню", callback_data='main_menu')
     markup.add(subscribe_btn)
     markup.add(back_btn)
