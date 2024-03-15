@@ -97,7 +97,7 @@ def check_user_subscription(call):
         else:
             bot.answer_callback_query(call.id, "Пожалуйста, подпишитесь на канал, чтобы продолжить.", show_alert=True)
     except Exception as e:
-        print(e)
+        logging.error("Error while checking user subscription:", e)
         bot.answer_callback_query(call.id, "Произошла ошибка при проверке подписки. Попробуйте позже.", show_alert=True)
 
 
@@ -231,5 +231,5 @@ while True:
     try:
         bot.polling(none_stop=True)
     except Exception as e:
-        logging.error(e)
+        logging.error("Exception occurred during polling:", e)
         time.sleep(15)
