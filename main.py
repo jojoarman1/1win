@@ -227,7 +227,6 @@ def close_menu_handler(call):
     bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
-
 while True:
     try:
         bot.polling(none_stop=True)
