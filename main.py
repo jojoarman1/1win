@@ -205,22 +205,24 @@ def register_command(message):
     bot.send_message(message.chat.id, "Для регистрации отправьте свой ID, начиная с 'ID:'. Например, ID:123456789.")
 
 
-@bot.message_handler(func=lambda message: message.text.isdigit())
+@bot.message_handler(func=lambda message: message.text.isdigit() and len(message.text) == 8)
 def handle_registration(message):
     user_id_telegram = str(message.chat.id)
-    user_id_site = message.text  # Получаем ID пользователя из текста сообщения
-    if len(user_id_site) == 8:
-        user_ids[user_id_telegram] = user_id_site  # Запоминаем соответствие ID пользователя в Telegram и ID на сайте
-        markup = types.InlineKeyboardMarkup()
-        give_signal_button = types.InlineKeyboardButton("❗️ Выдать сигнал ❗️", callback_data='give_signal')
-        instruction_button = types.InlineKeyboardButton("📚 Инструкция", callback_data='instruction')
-        close_menu_button = types.InlineKeyboardButton("🔒 Закрыть меню", callback_data='close_menu')
-        markup.row(give_signal_button)
-        markup.row(instruction_button)
-        markup.row(close_menu_button)
-        bot.send_message(message.chat.id, "Вы успешно зарегистрированы!", reply_markup=markup)
-    else:
-        bot.send_message(message.chat.id, "Неверный ID.")
+    user_id_site = message.text.strip()  # Получаем ID пользователя из текста сообщения
+    user_ids[user_id_telegram] = user_id_site  # Запоминаем соответствие ID пользователя в Telegram и ID на сайте
+    markup = types.InlineKeyboardMarkup()
+    give_signal_button = types.InlineKeyboardButton("❗️ Выдать сигнал ❗️", callback_data='give_signal')
+    instruction_button = types.InlineKeyboardButton("📚 Инструкция", callback_data='instruction')
+    close_menu_button = types.InlineKeyboardButton("🔒 Закрыть меню", callback_data='close_menu')
+    markup.row(give_signal_button)
+    markup.row(instruction_button)
+    markup.row(close_menu_button)
+    bot.send_message(message.chat.id, "Вы успешно зарегистрированы!", reply_markup=markup)
+
+@bot.message_handler(func=lambda message: message.text.isdigit() and len(message.text) != 8)
+def handle_invalid_id(message):
+    bot.send_message(message.chat.id, "Неверный ID.")
+
 
 @bot.callback_query_handler(func=lambda call: call.data == 'close_menu')
 def close_menu_handler(call):
