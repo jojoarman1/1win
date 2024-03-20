@@ -227,14 +227,14 @@ def handle_invalid_id(message):
 @bot.callback_query_handler(func=lambda call: call.data == 'close_menu')
 def close_menu_handler(call):
     bot.delete_message(call.message.chat.id, call.message.message_id)
-
-
+    
 try:
     bot.polling(none_stop=True)  # Запускаем опрос бота
 except Exception as e:
-    logging.error("Exception occurred during polling:", e)
+    logging.error("Возникло исключение во время опроса:", e)
     time.sleep(15)  # Делаем паузу перед повторной попыткой
 else:
-    logging.info("Bot polling ended gracefully.")
+    logging.info("Опрос бота завершен успешно.")
 finally:
-    logging.info("Bot stopped.")
+    logging.info("Бот остановлен.")
+
