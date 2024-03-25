@@ -6,7 +6,7 @@ import time
 import logging
 
 TOKEN = '7050738799:AAEUaTmFNYu3zKbesc8MapZI_w0zhM3SC6s'
-channel_username = '@hakmines'
+channel_id = -1001865221905  # Укажите здесь идентификатор вашего закрытого канала
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -22,11 +22,11 @@ user_ids = {}
 @bot.message_handler(commands=['start'])
 def welcome(message):
     markup = types.InlineKeyboardMarkup()
-    subscribe_btn = types.InlineKeyboardButton("Подписаться", url=f"https://t.me/{channel_username[1:]}")
+    subscribe_btn = types.InlineKeyboardButton("Подписаться", url='https://t.me/+A1m5z86gf5BkNmUy')
     check_btn = types.InlineKeyboardButton("Проверить", callback_data='check_subscription')
     markup.add(subscribe_btn)
     markup.add(check_btn)
-    user_name = bot.get_chat_member(channel_username, message.chat.id).user.first_name
+    user_name = bot.get_chat_member(channel_id, message.chat.id).user.first_name
     welcome_text = f"Добро пожаловать, {user_name}!\n\n"
     bot.send_message(message.chat.id, welcome_text + "Для использования бота - подпишись на наш канал🤝",
                      reply_markup=markup)
@@ -89,7 +89,7 @@ def back_to_main_menu_handler(call):
 
 def check_user_subscription(call):
     try:
-        chat_member = bot.get_chat_member(channel_username, call.message.chat.id)
+        chat_member = bot.get_chat_member(channel_id, call.message.chat.id)
         if chat_member.status not in ['left', 'kicked']:
             bot.answer_callback_query(call.id, "Вы подписаны на канал!", show_alert=True)
             osnova(call)
