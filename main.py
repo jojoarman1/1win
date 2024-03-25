@@ -6,7 +6,7 @@ import time
 import logging
 
 TOKEN = '7050738799:AAEUaTmFNYu3zKbesc8MapZI_w0zhM3SC6s'
-channel_username = '@hakermines12'
+channel_username = '@+ccsqen_4_m03Y2Qy'
 
 bot = telebot.TeleBot(TOKEN)
 
