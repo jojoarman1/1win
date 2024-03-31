@@ -236,6 +236,8 @@ def close_menu_handler(call):
 
 
 
+import logging
+
 logging.basicConfig(level=logging.INFO)
 
 # Остальная часть вашего кода остается без изменений
