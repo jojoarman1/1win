@@ -235,12 +235,18 @@ def close_menu_handler(call):
     bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
-try:
-    bot.polling(none_stop=True)  # Запускаем опрос бота
-except Exception as e:
-    logging.error("Возникло исключение во время опроса:", e)
-    time.sleep(15)  # Делаем паузу перед повторной попыткой
-else:
-    logging.info("Опрос бота завершен успешно.")
-finally:
-    logging.info("Бот остановлен.")
+
+logging.basicConfig(level=logging.INFO)
+
+# Остальная часть вашего кода остается без изменений
+
+def main():
+    while True:
+        try:
+            bot.polling(none_stop=True, interval=0, timeout=20)
+        except Exception as e:
+            logging.exception("Возникла ошибка во время опроса бота: %s", e)
+            time.sleep(15)
+
+if name == 'main':
+    main()
