@@ -5,12 +5,17 @@ from telebot import types
 import time
 import logging
 
+# Установка уровня логирования
+logging.basicConfig(level=logging.INFO)
+
+# Токен вашего бота
 TOKEN = '7050738799:AAEUaTmFNYu3zKbesc8MapZI_w0zhM3SC6s'
-channel_id = -1001865221905  # Укажите здесь идентификатор вашего закрытого канала
 
+# Идентификатор вашего закрытого канала
+channel_id = -1001865221905  
+
+# Создание объекта бота
 bot = telebot.TeleBot(TOKEN)
-
-waiting_for_id = set()
 
 # Словарь для хранения предыдущих состояний
 previous_state = {}
@@ -18,21 +23,8 @@ previous_state = {}
 # Словарь для хранения соответствия ID пользователя в Telegram и ID, полученного на сайте
 user_ids = {}
 
-
-@bot.message_handler(commands=['start'])
-def welcome(message):
-    markup = types.InlineKeyboardMarkup()
-    subscribe_btn = types.InlineKeyboardButton("Подписаться", url='https://t.me/+A1m5z86gf5BkNmUy')
-    check_btn = types.InlineKeyboardButton("Проверить", callback_data='check_subscription')
-    markup.add(subscribe_btn)
-    markup.add(check_btn)
-    user_name = bot.get_chat_member(channel_id, message.chat.id).user.first_name
-    welcome_text = f"Добро пожаловать, {user_name}!\n\n"
-    bot.send_message(message.chat.id, welcome_text + "Для использования бота - подпишись на наш канал🤝",
-                     reply_markup=markup)
-
-
-def osnova(call):
+# Основное меню бота
+def main_menu(call):
     markup = types.InlineKeyboardMarkup()
     reg_btn = types.InlineKeyboardButton("📱Регистрация", callback_data='register')
     instruction_btn = types.InlineKeyboardButton("📚Инструкция", callback_data='instruction')
@@ -50,22 +42,58 @@ def osnova(call):
     )
     bot.send_message(call.message.chat.id, welcome_message, reply_markup=markup, parse_mode='Markdown')
 
+# Обработчик команды /start
+@bot.message_handler(commands=['start'])
+def welcome(message):
+    markup = types.InlineKeyboardMarkup()
+    subscribe_btn = types.InlineKeyboardButton("Подписаться", url='https://t.me/+A1m5z86gf5BkNmUy')
+    check_btn = types.InlineKeyboardButton("Проверить", callback_data='check_subscription')
+    markup.add(subscribe_btn)
+    markup.add(check_btn)
+    user_name = bot.get_chat_member(channel_id, message.chat.id).user.first_name
+    welcome_text = f"Добро пожаловать, {user_name}!\n\n"
+    bot.send_message(message.chat.id, welcome_text + "Для использования бота - подпишись на наш канал🤝",
+                     reply_markup=markup)
 
+# Обработчик команды /register
+@bot.message_handler(commands=['register'])
+def register_command(message):
+    # Отправка сообщения с инструкцией о регистрации
+    bot.send_message(message.chat.id, "Для регистрации отправьте свой ID, начиная с 'ID:'. Например, ID:123456789.")
+
+# Обработчик текстовых сообщений с ID
+@bot.message_handler(func=lambda message: message.text.isdigit() and len(message.text) == 8)
+def handle_registration(message):
+    user_id_telegram = str(message.chat.id)
+    user_id_site = message.text.strip()  # Получаем ID пользователя из текста сообщения
+    user_ids[user_id_telegram] = user_id_site  # Запоминаем соответствие ID пользователя в Telegram и ID на сайте
+    markup = types.InlineKeyboardMarkup()
+    give_signal_button = types.InlineKeyboardButton("❗️ Выдать сигнал ❗️", callback_data='give_signal')
+    instruction_button = types.InlineKeyboardButton("📚 Инструкция", callback_data='instruction')
+    close_menu_button = types.InlineKeyboardButton("🔒 Закрыть меню", callback_data='close_menu')
+    markup.row(give_signal_button)
+    markup.row(instruction_button)
+    markup.row(close_menu_button)
+    bot.send_message(message.chat.id, "Вы успешно зарегистрированы!", reply_markup=markup)
+
+# Обработчик неправильных ID
+@bot.message_handler(func=lambda message: message.text.isdigit() and len(message.text) != 8)
+def handle_invalid_id(message):
+    bot.send_message(message.chat.id, "Неверный ID.")
+
+# Обработчик нажатий кнопок
 @bot.callback_query_handler(func=lambda call: call.data == 'check_subscription')
 def callback_handler(call):
     check_user_subscription(call)
-
 
 @bot.callback_query_handler(func=lambda call: call.data == 'register')
 def callback_handler(call):
     register(call)
 
-
 @bot.callback_query_handler(func=lambda call: call.data == 'instruction')
 def callback_handler(call):
     previous_state[call.message.chat.id] = send_instruction
     send_instruction(call)
-
 
 @bot.callback_query_handler(func=lambda call: call.data == 'give_signal')
 def callback_handler(call):
@@ -74,32 +102,31 @@ def callback_handler(call):
     else:
         bot.answer_callback_query(call.id, "Пожалуйста, сначала зарегистрируйтесь.")
 
-
 @bot.callback_query_handler(func=lambda call: call.data == 'main_menu')
 def back_to_main_menu_handler(call):
     chat_id = call.message.chat.id
     if chat_id in previous_state:
         previous_state.pop(chat_id)  # Удаляем предыдущее состояние
-    osnova(call)
+    main_menu(call)
     if str(chat_id) in user_ids:
         enable_give_signal_button(call)
     else:
         disable_give_signal_button(call)
 
-
+# Функция проверки подписки пользователя
 def check_user_subscription(call):
     try:
         chat_member = bot.get_chat_member(channel_id, call.message.chat.id)
         if chat_member.status not in ['left', 'kicked']:
             bot.answer_callback_query(call.id, "Вы подписаны на канал!", show_alert=True)
-            osnova(call)
+            main_menu(call)
         else:
             bot.answer_callback_query(call.id, "Пожалуйста, подпишитесь на канал, чтобы продолжить.", show_alert=True)
     except Exception as r:
         logging.error("Error while checking user subscription:", r)
         bot.answer_callback_query(call.id, "Произошла ошибка при проверке подписки. Попробуйте позже.", show_alert=True)
 
-
+# Функция регистрации пользователя
 def register(call):
     message = (
         "🔷 1. Для начала зарегистрируйтесь на сайте <a href='https://1wwbnd.com/casino/list?open=register'>1WIN("
@@ -117,7 +144,7 @@ def register(call):
     with open("REGISTERPHOTO.jpg", "rb") as photo:
         bot.send_photo(call.message.chat.id, photo, caption=message, reply_markup=markup, parse_mode='HTML')
 
-
+# Функция отправки инструкции пользователю
 def send_instruction(call):
     message = (
         "Бот основан и обучен на кластере нейросети 🖥 <b>[bitsGap]</b>.\n\n"
@@ -146,13 +173,8 @@ def send_instruction(call):
     with open("INSTRUKT.jpg", "rb") as photo:
         bot.send_photo(call.message.chat.id, photo.read(), caption=message, reply_markup=markup, parse_mode='HTML')
 
-
-last_message_id = None
-
-
+# Функция отправки сигнала пользователю
 def give_signal(call):
-    global last_message_id
-
     loading_messages = [
         "🔴 Получаю данные с сервера.",
         "🟡 Получаю данные с сервера..",
@@ -161,13 +183,6 @@ def give_signal(call):
         "🟡 Получаю данные с сервера..",
         "🔵 Получаю данные с сервера..."
     ]
-
-    if last_message_id:
-        try:
-            bot.delete_message(call.message.chat.id, last_message_id)
-        except telebot.apihelper.ApiTelegramException as r:
-            if "message to delete not found" not in r.description:
-                raise
 
     sent_message = bot.send_message(call.message.chat.id, loading_messages[0])
 
@@ -186,60 +201,22 @@ def give_signal(call):
         reply_markup = types.InlineKeyboardMarkup().add(button)
         sent_photo = bot.send_photo(call.message.chat.id, photo, reply_markup=reply_markup)
 
-        last_message_id = sent_photo.message_id
-
-    bot.delete_message(call.message.chat.id, sent_message.message_id)
-
-
+# Функция отключения кнопки выдачи сигнала
 def disable_give_signal_button(call):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("🔒 Выдать сигнал (зарегистрируйтесь)", callback_data='disabled'))
     bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
 
-
+# Функция включения кнопки выдачи сигнала
 def enable_give_signal_button(call):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("❗️ Выдать сигнал", callback_data='give_signal'))
     bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
 
-
-# Обработчик команды /register
-@bot.message_handler(commands=['register'])
-def register_command(message):
-    # Отправка сообщения с инструкцией о регистрации
-    bot.send_message(message.chat.id, "Для регистрации отправьте свой ID, начиная с 'ID:'. Например, ID:123456789.")
-
-
-@bot.message_handler(func=lambda message: message.text.isdigit() and len(message.text) == 8)
-def handle_registration(message):
-    user_id_telegram = str(message.chat.id)
-    user_id_site = message.text.strip()  # Получаем ID пользователя из текста сообщения
-    user_ids[user_id_telegram] = user_id_site  # Запоминаем соответствие ID пользователя в Telegram и ID на сайте
-    markup = types.InlineKeyboardMarkup()
-    give_signal_button = types.InlineKeyboardButton("❗️ Выдать сигнал ❗️", callback_data='give_signal')
-    instruction_button = types.InlineKeyboardButton("📚 Инструкция", callback_data='instruction')
-    close_menu_button = types.InlineKeyboardButton("🔒 Закрыть меню", callback_data='close_menu')
-    markup.row(give_signal_button)
-    markup.row(instruction_button)
-    markup.row(close_menu_button)
-    bot.send_message(message.chat.id, "Вы успешно зарегистрированы!", reply_markup=markup)
-
-
-@bot.message_handler(func=lambda message: message.text.isdigit() and len(message.text) != 8)
-def handle_invalid_id(message):
-    bot.send_message(message.chat.id, "Неверный ID.")
-
-
-@bot.callback_query_handler(func=lambda call: call.data == 'close_menu')
-def close_menu_handler(call):
-    bot.delete_message(call.message.chat.id, call.message.message_id)
-
-
-    bot.polling(none_stop=True)  # Запускаем опрос бота
-except Exception as e:
-    logging.error("Возникло исключение во время опроса:", e)
-    time.sleep(15)  # Делаем паузу перед повторной попыткой
-else:
-    logging.info("Опрос бота завершен успешно.")
-finally:
-    logging.info("Бот остановлен.")
+# Основной бесконечный цикл для непрерывной работы бота
+while True:
+    try:
+        bot.polling(none_stop=True)  # Запускаем опрос бота
+    except Exception as e:
+        logging.error("An exception occurred while polling the bot:", e)
+        time.sleep(15)  # Пауза перед повторной попыткой
