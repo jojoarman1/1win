@@ -248,5 +248,5 @@ def main():
             logging.exception("Возникла ошибка во время опроса бота: %s", e)
             time.sleep(15)
 
-if name == 'main':
+if __name__ == 'main':
     main()
