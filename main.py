@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import random
+import traceback
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
@@ -310,4 +311,5 @@ if __name__ == '__main__':
             loop.run_until_complete(dp.start_polling())  # Запускаем бота
         except Exception as e:
             print(f"Произошла ошибка: {e}")
+            traceback.print_exc()  # Выводим traceback ошибки
             continue  # Продолжаем цикл даже после ошибки
