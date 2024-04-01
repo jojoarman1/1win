@@ -1,159 +1,182 @@
-import random
-import os
-import telebot
-from telebot import types
-import time
+import asyncio
 import logging
+import os
+import random
 
-# Установка уровня логирования
+from aiogram import Bot, Dispatcher, types
+from aiogram.contrib.middlewares.logging import LoggingMiddleware
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+API_TOKEN = '7050738799:AAEUaTmFNYu3zKbesc8MapZI_w0zhM3SC6s'
+
 logging.basicConfig(level=logging.INFO)
 
-# Токен вашего бота
-TOKEN = '7050738799:AAEUaTmFNYu3zKbesc8MapZI_w0zhM3SC6s'
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher(bot)
+dp.middleware.setup(LoggingMiddleware())
 
-# Идентификатор вашего закрытого канала
-channel_id = -1001865221905  
+# Указываем путь к директории с изображениями
+photo_directory = "Signal/"
 
-# Создание объекта бота
-bot = telebot.TeleBot(TOKEN)
+is_registered = False
+is_valid_registration_id = False
 
-# Словарь для хранения предыдущих состояний
-previous_state = {}
 
-# Словарь для хранения соответствия ID пользователя в Telegram и ID, полученного на сайте
-user_ids = {}
+# Функция для проверки подписки пользователя
+async def check_subscription(user_id):
+    try:
+        # Получаем информацию о пользователе в канале
+        chat_member = await bot.get_chat_member(chat_id=-1001865221905, user_id=user_id)
 
-# Основное меню бота
-def main_menu(call):
-    markup = types.InlineKeyboardMarkup()
-    reg_btn = types.InlineKeyboardButton("📱Регистрация", callback_data='register')
-    instruction_btn = types.InlineKeyboardButton("📚Инструкция", callback_data='instruction')
-    signal_btn = types.InlineKeyboardButton("❗️Выдать сигнал❗️", callback_data='give_signal')
-    markup.add(reg_btn, instruction_btn)
-    markup.add(signal_btn)
-    welcome_message = (
-        "Добро пожаловать в 🔸*HAKERMINES*🔸!\n\n"
-        "💣 *Mines* - это гэмблинг игра в букмекерской конторе 1win, которая основывается на классическом “Сапёре”.\n"
+        # Проверяем статус пользователя в канале
+        if chat_member.status in ['administrator', 'member', 'creator']:
+            return True  # Пользователь подписан на канал
+        else:
+            return False  # Пользователь не подписан на канал
+    except Exception as e:
+        print("Ошибка при проверке подписки:", e)
+        return False  # Если возникла ошибка, считаем, что пользователь не подписан на канал
+
+
+@dp.message_handler(commands=['start'])
+async def start_command(message: types.Message):
+    user_name = message.from_user.first_name
+    welcome_message = f"Добро пожаловать, {user_name}!\n\nДля использования бота - подпишись на наш канал 🤝"
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton("Подписаться", url="https://t.me/+A1m5z86gf5BkNmUy"))
+    keyboard.add(InlineKeyboardButton("Проверить подписку", callback_data="check_subscription"))
+    await message.answer(welcome_message, reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda callback_query: callback_query.data == 'check_subscription')
+async def check_subscription_callback(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    if await check_subscription(user_id):
+        keyboard = InlineKeyboardMarkup()
+        keyboard.row(
+            InlineKeyboardButton("📱 Регистрация", callback_data="registration"),
+            InlineKeyboardButton("📚 Инструкция", callback_data="instruction")
+        )
+        keyboard.add(InlineKeyboardButton("💣 Получить сигнал", callback_data="signal"))
+        menu_text = (
+            "Добро пожаловать в 🔸HAKERMINES V3.0🔸!\n\n"
+            "💣Mines - это гэмблинг игра в букмекерской конторе 1win, которая основывается на классическом “Сапёре”.\n"
+            "Ваша цель - открывать безопасные ячейки и не попадаться в ловушки.\n\n"
+            "`\n"
+            "Наш бот основан на нейросети от OpenAI.\n"
+            "Он может предугадать расположение звёзд с вероятностью 90%.\n"
+            "`\n"
+        )
+        await bot.edit_message_text(
+            chat_id=callback_query.message.chat.id,
+            message_id=callback_query.message.message_id,
+            text=menu_text,
+            reply_markup=keyboard,
+            parse_mode="Markdown",
+        )
+    else:
+        await callback_query.answer("Вы не подписаны на канал. Пожалуйста, подпишитесь, чтобы продолжить.")
+
+
+@dp.message_handler(lambda message: len(message.text) == 8 and message.text.isdigit())
+async def process_registration_id(message: types.Message):
+    global is_valid_registration_id
+    is_valid_registration_id = True
+    registration_id = message.text
+    keyboard = InlineKeyboardMarkup()
+    keyboard.row(
+        InlineKeyboardButton("Инструкция", callback_data="instruction"),
+        InlineKeyboardButton("💣 Выдать сигнал 💣", callback_data="signal")
+    )
+    keyboard.add(InlineKeyboardButton("Закрыть меню", callback_data="close_menu"))  # Добавляем кнопку "Закрыть меню"
+    await message.answer("Вы успешно зарегистрировались!", reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda callback_query: callback_query.data == 'close_menu')
+async def close_menu_callback(callback_query: types.CallbackQuery):
+    await bot.delete_message(chat_id=callback_query.message.chat.id, message_id=callback_query.message.message_id)
+
+
+@dp.message_handler(lambda message: len(message.text) != 8 or not message.text.isdigit())
+async def invalid_registration_id(message: types.Message):
+    await message.answer("Неверный ID")
+
+
+@dp.callback_query_handler(lambda callback_query: callback_query.data == 'registration')
+async def registration_callback(callback_query: types.CallbackQuery):
+    # Текст с картинкой и кнопками
+    registration_text = (
+        "🔷 <b>1. Для начала зарегистрируйтесь на сайте</b> <a "
+        "href='https://1wwbnd.com/casino/list?open=register'>1WIN (CLICK)</a>\n"
+        "<b>ДЛЯ СТАБИЛЬНОЙ РАБОТЫ СОЗДАЙТЕ НОВЫЙ АККАУНТ - с секретным промокодом</b> <code>MINES19</code>\n"
+        "🔷 <b>2. После успешной регистрации cкопируйте ваш айди на сайте</b> (Вкладка 'пополнение' и в правом "
+        "верхнем углу"
+        "будет ваши цифры).\n"
+        "🔷 <b>3. И отправьте его боту в ответ на это сообщение.</b>"
+    )
+    keyboard = InlineKeyboardMarkup()
+    keyboard.row(
+        InlineKeyboardButton("Регистрация", url='https://1wwbnd.com/casino/list?open=register'),
+        InlineKeyboardButton("Вернуться в меню", callback_data="back_to_menu")
+    )
+    # Удаление старого сообщения
+    await bot.delete_message(
+        chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
+    )
+    # Отправка нового сообщения с фото и кнопками
+    await bot.send_photo(
+        chat_id=callback_query.message.chat.id,
+        photo=open("REGISTERPHOTO.jpg", "rb"),
+        caption=registration_text,
+        parse_mode="HTML",
+        reply_markup=keyboard
+    )
+
+
+@dp.callback_query_handler(lambda callback_query: callback_query.data == 'back_to_menu')
+async def back_to_menu_callback(callback_query: types.CallbackQuery):
+    # Текст с меню
+    menu_text = (
+        "Добро пожаловать в 🔸HAKERMINES V3.0🔸!\n\n"
+        "💣Mines - это гэмблинг игра в букмекерской конторе 1win, которая основывается на классическом “Сапёре”.\n"
         "Ваша цель - открывать безопасные ячейки и не попадаться в ловушки.\n\n"
         "`\n"
-        "Наш бот основан на нейросети от OpenAI..\n"
+        "Наш бот основан на нейросети от OpenAI.\n"
         "Он может предугадать расположение звёзд с вероятностью 90%.\n"
-        "`"
+        "`\n"
     )
-    bot.send_message(call.message.chat.id, welcome_message, reply_markup=markup, parse_mode='Markdown')
-
-# Обработчик команды /start
-@bot.message_handler(commands=['start'])
-def welcome(message):
-    markup = types.InlineKeyboardMarkup()
-    subscribe_btn = types.InlineKeyboardButton("Подписаться", url='https://t.me/+A1m5z86gf5BkNmUy')
-    check_btn = types.InlineKeyboardButton("Проверить", callback_data='check_subscription')
-    markup.add(subscribe_btn)
-    markup.add(check_btn)
-    user_name = bot.get_chat_member(channel_id, message.chat.id).user.first_name
-    welcome_text = f"Добро пожаловать, {user_name}!\n\n"
-    bot.send_message(message.chat.id, welcome_text + "Для использования бота - подпишись на наш канал🤝",
-                     reply_markup=markup)
-
-# Обработчик команды /register
-@bot.message_handler(commands=['register'])
-def register_command(message):
-    # Отправка сообщения с инструкцией о регистрации
-    bot.send_message(message.chat.id, "Для регистрации отправьте свой ID, начиная с 'ID:'. Например, ID:123456789.")
-
-# Обработчик текстовых сообщений с ID
-@bot.message_handler(func=lambda message: message.text.isdigit() and len(message.text) == 8)
-def handle_registration(message):
-    user_id_telegram = str(message.chat.id)
-    user_id_site = message.text.strip()  # Получаем ID пользователя из текста сообщения
-    user_ids[user_id_telegram] = user_id_site  # Запоминаем соответствие ID пользователя в Telegram и ID на сайте
-    markup = types.InlineKeyboardMarkup()
-    give_signal_button = types.InlineKeyboardButton("❗️ Выдать сигнал ❗️", callback_data='give_signal')
-    instruction_button = types.InlineKeyboardButton("📚 Инструкция", callback_data='instruction')
-    close_menu_button = types.InlineKeyboardButton("🔒 Закрыть меню", callback_data='close_menu')
-    markup.row(give_signal_button)
-    markup.row(instruction_button)
-    markup.row(close_menu_button)
-    bot.send_message(message.chat.id, "Вы успешно зарегистрированы!", reply_markup=markup)
-
-# Обработчик неправильных ID
-@bot.message_handler(func=lambda message: message.text.isdigit() and len(message.text) != 8)
-def handle_invalid_id(message):
-    bot.send_message(message.chat.id, "Неверный ID.")
-
-# Обработчик нажатий кнопок
-@bot.callback_query_handler(func=lambda call: call.data == 'check_subscription')
-def callback_handler(call):
-    check_user_subscription(call)
-
-@bot.callback_query_handler(func=lambda call: call.data == 'register')
-def callback_handler(call):
-    register(call)
-
-@bot.callback_query_handler(func=lambda call: call.data == 'instruction')
-def callback_handler(call):
-    previous_state[call.message.chat.id] = send_instruction
-    send_instruction(call)
-
-@bot.callback_query_handler(func=lambda call: call.data == 'give_signal')
-def callback_handler(call):
-    if str(call.message.chat.id) in user_ids:
-        give_signal(call)
-    else:
-        bot.answer_callback_query(call.id, "Пожалуйста, сначала зарегистрируйтесь.")
-
-@bot.callback_query_handler(func=lambda call: call.data == 'main_menu')
-def back_to_main_menu_handler(call):
-    chat_id = call.message.chat.id
-    if chat_id in previous_state:
-        previous_state.pop(chat_id)  # Удаляем предыдущее состояние
-    main_menu(call)
-    if str(chat_id) in user_ids:
-        enable_give_signal_button(call)
-    else:
-        disable_give_signal_button(call)
-
-# Функция проверки подписки пользователя
-def check_user_subscription(call):
-    try:
-        chat_member = bot.get_chat_member(channel_id, call.message.chat.id)
-        if chat_member.status not in ['left', 'kicked']:
-            bot.answer_callback_query(call.id, "Вы подписаны на канал!", show_alert=True)
-            main_menu(call)
-        else:
-            bot.answer_callback_query(call.id, "Пожалуйста, подпишитесь на канал, чтобы продолжить.", show_alert=True)
-    except Exception as r:
-        logging.error("Error while checking user subscription:", r)
-        bot.answer_callback_query(call.id, "Произошла ошибка при проверке подписки. Попробуйте позже.", show_alert=True)
-
-# Функция регистрации пользователя
-def register(call):
-    message = (
-        "🔷 1. Для начала зарегистрируйтесь на сайте <a href='https://1wwbnd.com/casino/list?open=register'>1WIN("
-        "CLICK) </a> ""ДЛЯ СТАБИЛЬНОЙ РАБОТЫ СОЗДАЙТЕ НОВЫЙ АККАУНТ - с секретным промокодом <code>MINES19</code>\n"
-        "🔷 2. После успешной регистрации cкопируйте ваш айди на сайте (Вкладка 'пополнение' и в правом верхнем углу "
-        "будет ваш ID).\n"
-        "🔷 3. И отправьте его боту в ответ на это сообщение."
+    keyboard = InlineKeyboardMarkup()
+    keyboard.row(
+        InlineKeyboardButton("📱 Регистрация", callback_data="registration"),
+        InlineKeyboardButton("📚 Инструкция", callback_data="instruction")
     )
-    markup = types.InlineKeyboardMarkup()
-    subscribe_btn = types.InlineKeyboardButton("📱🔶 Зарегистрироваться",
-                                               url='https://1wwbnd.com/casino/list?open=register    ')
-    back_btn = types.InlineKeyboardButton("🔙 Вернуться в главное меню", callback_data='main_menu')
-    markup.add(subscribe_btn)
-    markup.add(back_btn)
-    with open("REGISTERPHOTO.jpg", "rb") as photo:
-        bot.send_photo(call.message.chat.id, photo, caption=message, reply_markup=markup, parse_mode='HTML')
+    keyboard.add(InlineKeyboardButton("💣 Выдать сигнал! 💣", callback_data="signal"))
 
-# Функция отправки инструкции пользователю
-def send_instruction(call):
-    message = (
+    # Удаление старого сообщения
+    await bot.delete_message(
+        chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
+    )
+
+    # Отправка нового сообщения с меню
+    await bot.send_message(
+        chat_id=callback_query.message.chat.id,
+        text=menu_text,
+        reply_markup=keyboard,
+        parse_mode="Markdown",
+    )
+
+
+@dp.callback_query_handler(lambda callback_query: callback_query.data == 'instruction')
+async def instruction_callback(callback_query: types.CallbackQuery):
+    # Текст с инструкцией
+    instruction_text = (
         "Бот основан и обучен на кластере нейросети 🖥 <b>[bitsGap]</b>.\n\n"
         "Для тренировки бота было сыграно 🎰10.000+ игр.\n"
         "В данный момент пользователи бота успешно делают в день 15-25% от своего 💸 капитала!\n\n"
-
         "<code>На текущий момент бот по сей день проходит проверки и исправления! Точность бота составляет "
         "90%!</code>\n\n"
-
         "Для получения максимального профита следуйте следующей инструкции:\n\n"
         "🟢 1. Пройти регистрацию в букмекерской конторе <a href='https://1wwbnd.com/casino/list?open=register'>1WIN("
         "CLICK) </a> \n"
@@ -167,56 +190,124 @@ def send_instruction(call):
         "🟢 6. При неудачном сигнале советуем удвоить(Х²) ставку что бы полностью перекрыть потерю при следующем "
         "сигнале."
     )
-    markup = types.InlineKeyboardMarkup()
-    back_btn = types.InlineKeyboardButton("🔙 Вернуться в главное меню", callback_data='main_menu')
-    markup.add(back_btn)
-    with open("INSTRUKT.jpg", "rb") as photo:
-        bot.send_photo(call.message.chat.id, photo.read(), caption=message, reply_markup=markup, parse_mode='HTML')
+    keyboard = InlineKeyboardMarkup()
+    keyboard.row(
+        InlineKeyboardButton("Вернуться в меню", callback_data="back_to_menu")
+    )
+    # Удаление старого сообщения
+    await bot.delete_message(
+        chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
+    )
+    # Отправка нового сообщения с инструкцией
+    await bot.send_photo(
+        chat_id=callback_query.message.chat.id,
+        photo=open("INSTRUKT.jpg", "rb"),  # Путь к изображению
+        caption=instruction_text,
+        reply_markup=keyboard,
+        parse_mode="HTML",
+    )
 
-# Функция отправки сигнала пользователю
-def give_signal(call):
-    loading_messages = [
-        "🔴 Получаю данные с сервера.",
-        "🟡 Получаю данные с сервера..",
-        "🔵 Получаю данные с сервера...",
-        "🟣 Получаю данные с сервера....",
-        "🟡 Получаю данные с сервера..",
-        "🔵 Получаю данные с сервера..."
-    ]
 
-    sent_message = bot.send_message(call.message.chat.id, loading_messages[0])
+@dp.callback_query_handler(lambda callback_query: callback_query.data == 'signal')
+async def signal_callback(callback_query: types.CallbackQuery):
+    if not is_valid_registration_id:
+        await callback_query.answer(
+            "Пожалуйста, сначала зарегистрируйтесь для доступа к Сигналам.",
+            show_alert=True
+        )
+        return  # Выходим из функции, чтобы не выполнять дальнейший код
+    # Удаляем меню
+    await bot.delete_message(
+        chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
+    )
 
-    for message in loading_messages[1:]:
-        time.sleep(1)
-        bot.edit_message_text(chat_id=sent_message.chat.id, message_id=sent_message.message_id, text=message)
+    # Проверяем, были ли введены 8 цифр пользователем
+    if is_valid_registration_id:
+        # Если да, отправляем сигнал
+        # Отправляем сообщение о начале имитации загрузки
+        loading_message = await bot.send_message(
+            chat_id=callback_query.message.chat.id,
+            text="🌐Анализирую базу данных..."
+        )
 
-    photo_directory = "Signal/"
+        # Отправляем сообщение о начале имитации загрузки
+        for loading_text in ["🛜Получаю данные с сервера...", "⚠️Изучаю запросы..."]:
+            await asyncio.sleep(1)  # Задержка перед отправкой следующего сообщения
+            await bot.edit_message_text(
+                chat_id=callback_query.message.chat.id,
+                message_id=loading_message.message_id,
+                text=loading_text
+            )
+
+        # Получение случайного изображения и отправка
+        photo_files = os.listdir(photo_directory)
+        if photo_files:
+            random_photo_file = random.choice(photo_files)
+            photo_path = os.path.join(photo_directory, random_photo_file)
+            await bot.delete_message(chat_id=callback_query.message.chat.id, message_id=loading_message.message_id)
+            await bot.send_photo(
+                chat_id=callback_query.message.chat.id,
+                photo=open(photo_path, "rb"),
+                caption="Вот сигнал!",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="💣 Выдать сигнал 💣", callback_data="signal")]
+                ])
+            )
+        else:
+            await bot.send_message(
+                chat_id=callback_query.message.chat.id,
+                text="В директории нет изображений."
+            )
+    else:
+        # Если нет, уведомляем пользователя о необходимости ввести 8 цифр
+        await bot.send_message(
+            chat_id=callback_query.message.chat.id,
+            text="Пожалуйста, сначала введите 8 цифр."
+        )
+
+
+@dp.callback_query_handler(lambda callback_query: callback_query.data == 'new_signal')
+async def new_signal_callback(callback_query: types.CallbackQuery):
+    # Получение случайного изображения и отправка
     photo_files = os.listdir(photo_directory)
+    if photo_files:
+        random_photo_file = random.choice(photo_files)
+        photo_path = os.path.join(photo_directory, random_photo_file)
+        await bot.delete_message(chat_id=callback_query.message.chat.id, message_id=callback_query.message.message_id)
+        await bot.send_photo(
+            chat_id=callback_query.message.chat.id,
+            photo=open(photo_path, "rb"),
+            caption="Вот сигнал!",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="💣 Выдать сигнал 💣", callback_data="new_signal")]
+            ])
+        )
+    else:
+        await bot.send_message(
+            chat_id=callback_query.message.chat.id,
+            text="В директории нет изображений."
+        )
 
-    random_photo_file = random.choice(photo_files)
-    photo_path = os.path.join(photo_directory, random_photo_file)
 
-    with open(photo_path, "rb") as photo:
-        button = types.InlineKeyboardButton("❗️Выдать сигнал❗️", callback_data='give_signal')
-        reply_markup = types.InlineKeyboardMarkup().add(button)
-        sent_photo = bot.send_photo(call.message.chat.id, photo, reply_markup=reply_markup)
+async def on_startup(dp):
+    await bot.set_my_commands([
+        types.BotCommand("start", "Начать")
+    ])
 
-# Функция отключения кнопки выдачи сигнала
-def disable_give_signal_button(call):
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("🔒 Выдать сигнал (зарегистрируйтесь)", callback_data='disabled'))
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
 
-# Функция включения кнопки выдачи сигнала
-def enable_give_signal_button(call):
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("❗️ Выдать сигнал", callback_data='give_signal'))
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
+async def on_shutdown(dp):
+    # Close the bot's session and connector when the bot shuts down
+    await bot.session.close()
 
-# Основной бесконечный цикл для непрерывной работы бота
-while True:
-    try:
-        bot.polling(none_stop=True)  # Запускаем опрос бота
-    except Exception as e:
-        logging.error("An exception occurred while polling the bot:", e)
-        time.sleep(15)  # Пауза перед повторной попыткой
+
+if __name__ == '__main__':
+    while True:
+        try:
+            loop = asyncio.get_event_loop()  # Получаем цикл событий
+            loop.create_task(on_startup(dp))  # Создаем задачу для запуска на старте
+            loop.run_until_complete(dp.start_polling())  # Запускаем бота
+        except Exception as e:
+            print(f"Произошла ошибка: {e}")
+            continue  # Продолжаем цикл даже после ошибки
