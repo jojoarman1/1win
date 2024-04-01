@@ -214,7 +214,7 @@ async def instruction_callback(callback_query: types.CallbackQuery):
 async def signal_callback(callback_query: types.CallbackQuery):
     if not is_valid_registration_id:
         await callback_query.answer(
-            "Пожалуйста, сначала зарегистрируйтесь для доступа к Сигналам.",
+            "Пожалуйста, сначала зарегистрируйтесь для доступа к сигналам.",
             show_alert=True
         )
         return  # Выходим из функции, чтобы не выполнять дальнейший код
@@ -251,7 +251,7 @@ async def signal_callback(callback_query: types.CallbackQuery):
             await bot.send_photo(
                 chat_id=callback_query.message.chat.id,
                 photo=open(photo_path, "rb"),
-                caption="Вот сигнал!",
+                caption="Ваш сигнал!",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="💣 Выдать сигнал 💣", callback_data="signal")]
                 ])
@@ -280,7 +280,7 @@ async def new_signal_callback(callback_query: types.CallbackQuery):
         await bot.send_photo(
             chat_id=callback_query.message.chat.id,
             photo=open(photo_path, "rb"),
-            caption="Вот сигнал!",
+            caption="Ваш сигнал!",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="💣 Выдать сигнал 💣", callback_data="new_signal")]
             ])
